@@ -60,8 +60,8 @@ if btn_analyze:
     else:
         with st.spinner("جاري تفكيك النص وتحليله نقديّاً..."):
             try:
-                # استخدام نموذج gemini-1.5-flash الصحيح بالرابط المباشر
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+                # محاولة الاتصال بالنموذج المحدث الأول (gemini-2.5-flash)
+                models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
                 
                 prompt = f"""
                 أنت ناقد أدبي وخبير أكاديمي متخصص في النقد السردي والسيميائيات (مناهج جيرار جينيت، ورولان بارت، والناقدين العرب).
@@ -101,24 +101,23 @@ if btn_analyze:
                 }
 
                 headers = {'Content-Type': 'application/json'}
-                response = requests.post(url, json=payload, headers=headers)
-                res_json = response.json()
+                
+                success = False
+                for model_name in models_to_try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+                    response = requests.post(url, json=payload, headers=headers)
+                    res_json = response.json()
 
-                if response.status_code == 200:
-                    analysis_result = res_json['candidates'][0]['content']['parts'][0]['text']
-                    st.write("---")
-                    st.markdown("### 📊 نتائج التحليل السردي والنقدي:")
-                    st.markdown(analysis_result)
-                else:
-                    # في حال وجد أي استثناء بنوع النموذج يتم التحويل تلقائياً لـ gemini-2.0-flash
-                    url_alt = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
-                    res_alt = requests.post(url_alt, json=payload, headers=headers).json()
-                    if 'candidates' in res_alt:
+                    if response.status_code == 200 and 'candidates' in res_json:
+                        analysis_result = res_json['candidates'][0]['content']['parts'][0]['text']
                         st.write("---")
                         st.markdown("### 📊 نتائج التحليل السردي والنقدي:")
-                        st.markdown(res_alt['candidates'][0]['content']['parts'][0]['text'])
-                    else:
-                        st.error(f"خطأ من API: {res_json.get('error', {}).get('message', 'خطأ غير معروف')}")
+                        st.markdown(analysis_result)
+                        success = True
+                        break
+
+                if not success:
+                    st.error("تعذر الاتصال بالسيرفر. يرجى التأكد من صحة مفتاح GEMINI_API_KEY في إعدادات Secrets.")
 
             except Exception as e:
                 st.error(f"حدث خطأ أثناء إجراء التحليل: {e}")
