@@ -11,10 +11,8 @@ st.set_page_config(
     layout="wide"
 )
 
-# تخصيص التصميم ومظهر الأزرار ومربع النص (مع إصلاح لون الخط)
 st.markdown("""
     <style>
-    /* تنسيق مربع النص الكبير ولون الخط داكن وواضح */
     .stTextArea textarea {
         font-size: 17px !important;
         line-height: 1.8 !important;
@@ -26,7 +24,6 @@ st.markdown("""
     div[data-baseweb="textarea"] textarea {
         color: #1e1e1e !important;
     }
-    /* زر التحليل السردي */
     div.stButton > button[key="analyze_btn"] {
         background-color: #198754 !important;
         color: white !important;
@@ -37,10 +34,6 @@ st.markdown("""
         width: 100% !important;
         border: none !important;
     }
-    div.stButton > button[key="analyze_btn"]:hover {
-        background-color: #157347 !important;
-    }
-    /* زر المسح */
     div.stButton > button[key="clear_btn"] {
         background-color: #dc3545 !important;
         color: white !important;
@@ -51,10 +44,6 @@ st.markdown("""
         width: 100% !important;
         border: none !important;
     }
-    div.stButton > button[key="clear_btn"]:hover {
-        background-color: #bb2d3b !important;
-    }
-    /* صندوق عرض النتائج */
     .result-box {
         background-color: #f8f9fa;
         color: #212529;
@@ -69,33 +58,32 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # -----------------------------------------------------------------------------
-# 2. استدعاء مفتاح API بأمان من Streamlit Secrets
+# 2. استدعاء المفتاح بأمان
 # -----------------------------------------------------------------------------
 API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 
 st.title("📖 مختبر التحليل السردي والبنيوي")
 st.subheader("د. عمر الرواجفة | قسم اللغة العربية وآدابها")
-st.write("أداة أكاديمية تفاعلية قائمة على الذكاء الاصطناعي لتفكيك النصوص الروائية والقصصية وفق مناهج النقد السردي والسيميائيات الحديثة.")
+st.write("أداة أكاديمية لتفكيك النصوص السردية وفق مناهج النقد الحديث.")
 st.write("---")
 
 # -----------------------------------------------------------------------------
-# 3. مربع النص وإدارة الأزرار
+# 3. الواجهة
 # -----------------------------------------------------------------------------
 if 'narrative_text' not in st.session_state:
     st.session_state['narrative_text'] = ""
 
 narrative_input = st.text_area(
-    "ضع النص السردي (رواية، قصّة، مقطع سردي) هنا للتحليل الكامل:",
+    "ضع النص السردي هنا:",
     value=st.session_state['narrative_text'],
     height=380,
-    placeholder="انسخ النص السردي الطويل واكتبه هنا (يتسع لمئات الكلمات والصفحات)..."
+    placeholder="انسخ النص السردي..."
 )
 
 col_btn1, col_btn2 = st.columns([3, 1])
 
 with col_btn1:
     analyze_click = st.button("🔬 تَقْدِيمُ تَحْلِيلٍ سَرْدِيٍّ شَامِلٍ", key="analyze_btn")
-
 with col_btn2:
     clear_click = st.button("🗑️ مسح النص", key="clear_btn")
 
@@ -104,63 +92,43 @@ if clear_click:
     st.rerun()
 
 # -----------------------------------------------------------------------------
-# 4. محرك التحليل بالذكاء الاصطناعي
+# 4. محرك التحليل (باستخدام الموديل الأكثر استقراراً)
 # -----------------------------------------------------------------------------
 if analyze_click:
     if not API_KEY:
-        st.error("⚠️ لم يتم العثور على مفتاح GEMINI_API_KEY داخل Secrets. يرجى إضافته في إعدادات Streamlit Cloud.")
+        st.error("يرجى إضافة GEMINI_API_KEY في إعدادات Streamlit.")
     elif not narrative_input.strip():
-        st.warning("يرجى إدخال النص السردي أولاً قبل بدء التحليل.")
+        st.warning("يرجى إدخال النص أولاً.")
     else:
-        with st.spinner("جاري تفكيك النص السردي وتحليله وفق المناهج النقديّة والسيميائية..."):
+        with st.spinner("جاري التحليل..."):
             try:
                 client = genai.Client(api_key=API_KEY)
                 
+                # استخدام الموديل المستقر
+                model_id = 'gemini-1.5-flash' 
+                
                 prompt = f"""
-                أنت ناقد أدبي وخبير أكاديمي متخصص في النقد السردي والسيميائيات (مناهج جيرار جينيت، ورولان بارت، والناقدين العرب).
-                قم بإجراء تحليل نقد بنيوي حاسوبي ودقيق للنص الأدبي المرفق أدناه:
-
-                النص السردي:
-                \"\"\"
+                أنت ناقد أدبي وخبير أكاديمي متخصص في النقد السردي.
+                حلل النص التالي تحليلاً بنيوياً:
                 {narrative_input}
-                \"\"\"
-
-                المطلوب تقديم تقرير نقد بنيوي شامل ومفصل يحتوي على المحاور التالية بشكل مباشر ومقسم بوضوح:
-
-                1. **الراوي والتبئير (Focalization):**
-                   - نوع الراوي (مشارِك/عليم/خارجي) مع تحديد ضمير السرد الأغلب.
-                   - نوع التبئير (صفر/داخلي/خارجي) وتحولاته داخل النص.
-
-                2. **الزمن السردي (Narrative Time):**
-                   - المفارقات الزمنية (الاسترجاع Analepsis / الاستباق Prolepsis).
-                   - السرعة السردية (الخلاصة، المشهد، الوقفات الوصفية، الحذف).
-
-                3. **الشخصيات والخطاب السردي:**
-                   - الشخصيات (رئيسية/ثانوية) ودورها العاملِي (Actantial Model).
-                   - أشكال الخطاب (مباشر، غير مباشر، غير مباشر حر).
-
-                4. **المونولوج واللغة السردية:**
-                   - النجوى الداخلية (المونولوج الباطني) والتداعي الحر للأفكار.
-                   - مستويات اللغة السردية والأنساق المعجمية والدلالية الأبرز.
-
-                5. **المكان والفضاء السردي (Space & Setting):**
-                   - طبيعة أطر المكان (مغلق/مفتوح، أليف/معادٍ) وعلاقته بحالة الشخصيات النفسية والدلالية.
+                
+                المطلوب:
+                1. الراوي والتبئير.
+                2. الزمن السردي (استرجاع، استباق، سرعة).
+                3. الشخصيات والخطاب السردي.
+                4. المونولوج واللغة.
+                5. المكان والفضاء السردي.
                 """
 
                 response = client.models.generate_content(
-                    model='gemini-3.6-flash',
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        temperature=0.3
-                    )
+                    model=model_id,
+                    contents=prompt
                 )
 
-                st.write("---")
-                st.markdown("### 📊 نتائج التحليل السردي والنقدي:")
+                st.markdown("### 📊 نتائج التحليل:")
                 st.markdown(f"<div class='result-box'>{response.text}</div>", unsafe_allow_html=True)
 
             except Exception as e:
-                st.error(f"حدث خطأ أثناء إجراء التحليل: {e}")
+                st.error(f"حدث خطأ أثناء الاتصال بالخادم (قد يكون ضغطاً مؤقتاً): {e}")
 
-st.write("---")
-st.caption("تطوير د. عمر الرواجفة © مختبر اللسانيات الحاسوبية وتحليل الخطاب")
+st.caption("تطوير د. عمر الرواجفة © مختبر اللسانيات الحاسوبية")
