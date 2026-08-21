@@ -18,16 +18,6 @@ st.markdown("""
     div[data-baseweb="textarea"] textarea {
         color: #1e1e1e !important;
     }
-    .result-box {
-        background-color: #f8f9fa;
-        color: #212529;
-        padding: 22px;
-        border-radius: 10px;
-        border-right: 5px solid #0d6efd;
-        direction: rtl;
-        font-size: 16px;
-        line-height: 1.8;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -70,8 +60,8 @@ if btn_analyze:
     else:
         with st.spinner("جاري تفكيك النص وتحليله نقديّاً..."):
             try:
-                # رابط الاتصال المباشر بالنموذج المعتمد
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+                # رابط الاتصال الصحيح بـ API v1beta
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
                 
                 prompt = f"""
                 أنت ناقد أدبي وخبير أكاديمي متخصص في النقد السردي والسيميائيات (مناهج جيرار جينيت، ورولان بارت، والناقدين العرب).
@@ -118,7 +108,7 @@ if btn_analyze:
                     analysis_result = res_json['candidates'][0]['content']['parts'][0]['text']
                     st.write("---")
                     st.markdown("### 📊 نتائج التحليل السردي والنقدي:")
-                    st.markdown(f"<div class='result-box'>{analysis_result}</div>", unsafe_allow_html=True)
+                    st.markdown(analysis_result)
                 else:
                     st.error(f"خطأ من API: {res_json.get('error', {}).get('message', 'خطأ غير معروف')}")
 
