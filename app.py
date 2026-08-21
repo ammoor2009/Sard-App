@@ -1,33 +1,119 @@
 import streamlit as st
 import google.generativeai as genai
 
-# إعدادات الصفحة
+# 1. إعدادات الصفحة
 st.set_page_config(page_title="مختبر التحليل السردي", page_icon="📖", layout="wide")
 
-# إعداد المفتاح
+# 2. تخصيص المظهر وتسهيل القراءة
+st.markdown("""
+    <style>
+    .stTextArea textarea {
+        font-size: 17px !important;
+        line-height: 1.8 !important;
+        direction: rtl !important;
+        border-radius: 10px !important;
+        background-color: #ffffff !important;
+        color: #1e1e1e !important;
+    }
+    div[data-baseweb="textarea"] textarea {
+        color: #1e1e1e !important;
+    }
+    .result-box {
+        background-color: #f8f9fa;
+        color: #212529;
+        padding: 22px;
+        border-radius: 10px;
+        border-right: 5px solid #0d6efd;
+        direction: rtl;
+        font-size: 16px;
+        line-height: 1.8;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+# 3. جلب المفتاح وإعداد النموذج
 api_key = st.secrets.get("GEMINI_API_KEY")
+
 if api_key:
     genai.configure(api_key=api_key)
-    # إعداد النموذج
     model = genai.GenerativeModel('gemini-1.5-flash')
-else:
-    st.error("مفتاح API مفقود!")
 
-# الواجهة
+# 4. الواجهة والمدخلات
 st.title("📖 مختبر التحليل السردي والبنيوي")
-if 'text' not in st.session_state: st.session_state['text'] = ""
-text = st.text_area("ضع النص السردي هنا:", value=st.session_state['text'], height=300)
+st.subheader("د. عمر الرواجفة | قسم اللغة العربية وآدابها")
+st.write("أداة أكاديمية تفاعلية لتفكيك النصوص الروائية والقصصية وفق مناهج النقد السردي الحديث.")
+st.write("---")
 
-if st.button("🔬 تَقْدِيمُ تَحْلِيلٍ سَرْدِيٍّ"):
+if 'text' not in st.session_state:
+    st.session_state['text'] = ""
+
+text_input = st.text_area(
+    "ضع النص السردي هنا للتحليل الشامل:",
+    value=st.session_state['text'],
+    height=350,
+    placeholder="انسخ النص السردي واكتبه هنا..."
+)
+
+col1, col2 = st.columns([3, 1])
+
+with col1:
+    btn_analyze = st.button("🔬 تَقْدِيمُ تَحْلِيلٍ سَرْدِيٍّ شَامِلٍ", type="primary", use_container_width=True)
+
+with col2:
+    btn_clear = st.button("🗑️ مسح النص", use_container_width=True)
+
+if btn_clear:
+    st.session_state['text'] = ""
+    st.rerun()
+
+# 5. إجراء التحليل السردي
+if btn_analyze:
     if not api_key:
-        st.error("تأكد من إضافة GEMINI_API_KEY في إعدادات Streamlit.")
-    elif not text.strip():
-        st.warning("الرجاء إدخال النص أولاً.")
+        st.error("⚠️ لم يتم العثور على GEMINI_API_KEY في إعدادات Streamlit Secrets.")
+    elif not text_input.strip():
+        st.warning("يرجى إدخال النص السردي أولاً.")
     else:
-        with st.spinner("جاري التحليل..."):
+        with st.spinner("جاري تفكيك النص وتحليله نقديّاً..."):
             try:
-                response = model.generate_content(f"حلل النص التالي بنيوياً: {text}")
-                st.markdown("### 📊 نتائج التحليل:")
-                st.write(response.text)
+                prompt = f"""
+                أنت ناقد أدبي وخبير أكاديمي متخصص في النقد السردي والسيميائيات (مناهج جيرار جينيت، ورولان بارت، والناقدين العرب).
+                قم بإجراء تحليل نقد بنيوي حاسوبي ودقيق للنص الأدبي المرفق أدناه:
+
+                النص السردي:
+                \"\"\"
+                {text_input}
+                \"\"\"
+
+                المطلوب تقديم تقرير نقد بنيوي شامل ومفصل يحتوي على المحاور التالية بشكل مباشر ومقسم بوضوح:
+
+                1. **الراوي والتبئير (Focalization):**
+                   - نوع الراوي (مشارِك/عليم/خارجي) مع تحديد ضمير السرد الأغلب.
+                   - نوع التبئير (صفر/داخلي/خارجي) وتحولاته داخل النص.
+
+                2. **الزمن السردي (Narrative Time):**
+                   - المفارقات الزمنية (الاسترجاع Analepsis / الاستباق Prolepsis).
+                   - السرعة السردية (الخلاصة، المشهد، الوقفات الوصفية، الحذف).
+
+                3. **الشخصيات والخطاب السردي:**
+                   - الشخصيات (رئيسية/ثانوية) ودورها العاملِي (Actantial Model).
+                   - أشكال الخطاب (مباشر، غير مباشر، غير مباشر حر).
+
+                4. **المونولوج واللغة السردية:**
+                   - النجوى الداخلية (المونولوج الباطني) والتداعي الحر للأفكار.
+                   - مستويات اللغة السردية والأنساق المعجمية والدلالية الأبرز.
+
+                5. **المكان والفضاء السردي (Space & Setting):**
+                   - طبيعة أطر المكان (مغلق/مفتوح، أليف/معادٍ) وعلاقته بحالة الشخصيات النفسية والدلالية.
+                """
+
+                response = model.generate_content(prompt)
+                
+                st.write("---")
+                st.markdown("### 📊 نتائج التحليل السردي والنقدي:")
+                st.markdown(f"<div class='result-box'>{response.text}</div>", unsafe_allow_html=True)
+
             except Exception as e:
-                st.error(f"حدث خطأ أثناء الاتصال: {e}")
+                st.error(f"حدث خطأ أثناء إجراء التحليل: {e}")
+
+st.write("---")
+st.caption("تطوير د. عمر الرواجفة © مختبر اللسانيات الحاسوبية وتحليل الخطاب")
