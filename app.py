@@ -13,31 +13,85 @@ st.set_page_config(
 )
 
 # =========================================================
-# 2. التنسيق
+# 2. التنسيق والتصميم
 # =========================================================
 
 st.markdown("""
 <style>
 
+/* الخلفية الرئيسية */
+.stApp {
+    background-color: #f3efe6 !important;
+}
+
+/* منطقة المحتوى */
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 3rem;
+}
+
+/* العنوان */
+h1 {
+    color: #3b3025 !important;
+    text-align: center !important;
+    font-weight: 800 !important;
+}
+
+/* العناوين الفرعية */
+h2, h3 {
+    color: #4b3a2a !important;
+}
+
+/* النصوص */
+.stMarkdown {
+    direction: rtl;
+    text-align: right;
+}
+
+/* مربع إدخال النص */
 .stTextArea textarea {
     font-size: 17px !important;
     line-height: 1.9 !important;
     direction: rtl !important;
     text-align: right !important;
-    border-radius: 10px !important;
+    border-radius: 12px !important;
     background-color: #ffffff !important;
     color: #1e1e1e !important;
+    border: 1px solid #d5c8b5 !important;
 }
 
+/* مربع النص */
 div[data-baseweb="textarea"] textarea {
     direction: rtl !important;
     text-align: right !important;
     color: #1e1e1e !important;
+    background-color: #ffffff !important;
 }
 
-.stMarkdown {
+/* تسميات العناصر */
+label {
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+/* الأزرار */
+.stButton > button {
+    border-radius: 10px !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    min-height: 48px !important;
+}
+
+/* نتيجة التحليل */
+div[data-testid="stMarkdownContainer"] {
     direction: rtl;
     text-align: right;
+    line-height: 1.9;
+}
+
+/* الخط الفاصل */
+hr {
+    border-color: #d8cbb8 !important;
 }
 
 </style>
@@ -53,7 +107,7 @@ st.subheader("د. عمر الرواجفة | قسم اللغة العربية و�
 
 st.write(
     "أداة أكاديمية تفاعلية لتفكيك النصوص الروائية والقصصية "
-    " وفق مناهج النقد السردي الحديث لمساعدة طلاب قسم اللغة العربية/فيلادلفيا."
+    "وفق مناهج النقد السردي الحديث."
 )
 
 st.write("---")
@@ -293,7 +347,7 @@ if btn_analyze:
             response = None
             last_error = None
 
-            # المحاولة الأولى + محاولتان تلقائيتان عند الفشل
+            # ثلاث محاولات تلقائية
             for attempt in range(3):
 
                 try:
@@ -307,17 +361,14 @@ if btn_analyze:
                     if response and response.text:
                         break
 
-                    # لم تصل نتيجة نصية
                     last_error = "لم يُرجع النموذج نتيجة نصية."
 
                 except Exception as e:
 
                     last_error = e
 
-                    # إذا لم تكن المحاولة الأخيرة
+                    # الانتظار قبل إعادة المحاولة
                     if attempt < 2:
-
-                        # انتظار 3 ثوانٍ ثم إعادة المحاولة
                         time.sleep(3)
 
             # -------------------------------------------------
@@ -350,4 +401,4 @@ st.write("---")
 
 st.caption(
     "تطوير د. عمر الرواجفة © مختبر اللسانيات الحاسوبية وتحليل الخطاب"
-                    )
+)
