@@ -12,17 +12,42 @@ st.set_page_config(
 
 st.markdown("""
     <style>
-    .prosody-symbols {
-        font-family: 'Courier New', monospace;
-        font-size: 28px;
+    .prosody-table-container {
+        display: flex;
+        flex-direction: row-reverse;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 20px 0;
+        direction: rtl;
+    }
+    .prosody-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        min-width: 32px;
+        padding: 4px 6px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .prosody-char {
+        font-size: 22px;
+        font-weight: bold;
+        color: #198754;
+        line-height: 1.2;
+    }
+    .prosody-symbol {
+        font-size: 20px;
         font-weight: bold;
         color: #0d6efd;
-        background-color: #f8f9fa;
-        padding: 12px;
-        border-radius: 8px;
+        line-height: 1.2;
+        margin-top: 4px;
+        border-top: 1px dashed #ced4da;
+        width: 100%;
         text-align: center;
-        letter-spacing: 4px;
-        direction: ltr;
     }
     .prosody-text {
         font-size: 22px;
@@ -63,10 +88,9 @@ SPECIAL_WORDS = {
 }
 
 # -----------------------------------------------------------------------------
-# 3. محرك الكتابة العروضية وفق الشروط وقاعدة التقاء الساكنين
+# 3. محرك الكتابة العروضية مع مراعاة قواعد منع التقاء الساكنين
 # -----------------------------------------------------------------------------
 def process_prosodic_rules(text, is_end_of_verse=True):
-    # استبدال الكلمات الخاصة ذات المحذوف الإملائي
     words = text.split()
     processed_words = []
     for w in words:
@@ -76,7 +100,7 @@ def process_prosodic_rules(text, is_end_of_verse=True):
         processed_words.append(w)
     text = " ".join(processed_words)
 
-    # القاعدة: حذف الألف الفارقة بعد واو الجماعة
+    # حذف الألف الفارقة بعد واو الجماعة
     text = re.sub(r'وا(\s|$)', r'و\1', text)
 
     # معالجة (أل) الشمسية والقمرية
@@ -87,7 +111,6 @@ def process_prosodic_rules(text, is_end_of_verse=True):
     text = re.sub(r'([^\s])\s*ال', r'\1لْ', text)
     text = re.sub(r'([^\s])\s*ٱ', r'\1', text)
 
-    # معالجة الشدة والتشكيل والتنوين حرفاً بحرف
     res = []
     i = 0
     n = len(text)
@@ -124,7 +147,7 @@ def process_prosodic_rules(text, is_end_of_verse=True):
             if is_end_of_verse and (i == n - 1 or (i < n - 1 and text[i+1] in SHORT_HARAKAT and i+2 == n)):
                 res.append('هْ')
             else:
-                res.append(TAA := 'ت')
+                res.append('ت')
 
         else:
             res.append(char)
@@ -133,20 +156,16 @@ def process_prosodic_rules(text, is_end_of_verse=True):
 
     prosodic = "".join(res)
 
-    # -------------------------------------------------------------------------
-    # قاعدة التقاء الساكنين: حذف حروف المد الساكنة (ا، و، ي، ى) إذا تلاها ساكن
-    # -------------------------------------------------------------------------
+    # قاعدة منع التقاء الساكنين
     prosodic = re.sub(r'([اىىَ])\s*([ْلْأإآتثجحخدذرزسشصضطظلعغفقكلمنهوي])ْ', r'\2ْ', prosodic)
     prosodic = re.sub(r'[اىى]\s*لْ', r'لْ', prosodic)
     prosodic = re.sub(r'ي\s*لْ', r'لْ', prosodic)
     prosodic = re.sub(r'ِي\s*([ْلْأإآتثجحخدذرزسشصضطظلعغفقكلمنهوي])ْ', r'\1ْ', prosodic)
     prosodic = re.sub(r'و\s*لْ', r'لْ', prosodic)
     prosodic = re.sub(r'ُو\s*([ْلْأإآتثجحخدذرزسشصضطظلعغفقكلمنهوي])ْ', r'\1ْ', prosodic)
-
-    # تنظيف عام لأي حروف مد متلوة بسكون مباشر لمنع التقاء الساكنين عروضياً
     prosodic = re.sub(r'([َاِوُ])\s+([ْأإآاىل])', r'\2', prosodic)
 
-    # إشباع حركة الروي عند نهاية الشطر/البيت
+    # إشباع الوقف عند آخر الشطر
     if is_end_of_verse and prosodic:
         if prosodic[-1] == 'َ':
             prosodic = prosodic[:-1] + 'َا'
@@ -158,15 +177,13 @@ def process_prosodic_rules(text, is_end_of_verse=True):
     return prosodic
 
 # -----------------------------------------------------------------------------
-# 4. تحويل النص العروضي إلى الرموز العروضية الخليلية (/ و ○)
+# 4. تفكيك النص إلى أزواج (حرف مع تشكيله -> رمز عروضي)
 # -----------------------------------------------------------------------------
-def text_to_prosodic_symbols(prosodic_text):
+def get_aligned_prosody(prosodic_text):
     """
-    تحويل الكتابة العروضية إلى الرموز الخليلية:
-    /  = حرف متحرك
-    ○ = حرف ساكن
+    تفكيك النص العروضي لمقاطع حرفية مسندة إلى رمز عروضي مباشر (/ أو ○)
     """
-    symbols = []
+    aligned = []
     text = re.sub(r'\s+', '', prosodic_text)
     i = 0
     n = len(text)
@@ -180,24 +197,26 @@ def text_to_prosodic_symbols(prosodic_text):
 
         next_char = text[i+1] if i + 1 < n else ''
 
-        if next_char == 'ْ' or char in ['ا', 'و', 'ي', 'ى']:
-            symbols.append('○')
-            if next_char == 'ْ':
-                i += 1
+        if next_char == 'ْ':
+            aligned.append((char + 'ْ', '○'))
+            i += 2
         elif next_char in SHORT_HARAKAT:
-            symbols.append('/')
+            aligned.append((char + next_char, '/'))
+            i += 2
+        elif char in ['ا', 'و', 'ي', 'ى']:
+            aligned.append((char, '○'))
+            i += 1
         else:
-            symbols.append('/')
+            # افتراض متحرك إذا أهمل التشكيل
+            aligned.append((char, '/'))
+            i += 1
 
-        i += 1
-
-    return "".join(symbols)
+    return aligned
 
 # -----------------------------------------------------------------------------
-# 5. مطابقة البحور الشعريّة باستخدام الرموز العروضية
+# 5. مطابقة البحور الشعريّة
 # -----------------------------------------------------------------------------
 def detect_meter(symbol_seq):
-    # خريطة أوزان البحور بالرموز العروضية (/ و ○)
     meters = {
         "البحر الطويل": ["//○/○//○/○//○/○//○/○", "//○/○//○/○//○/○//○//○"],
         "البحر البسيط": ["//○//○/○//○//○/○", "//○//○/○//○//○/○//○//○/○"],
@@ -224,15 +243,28 @@ poem_text = st.text_area("أدخل البيت الشعري أو الشطر مش�
 if st.button("تَقْطِيعُ النَّصِّ وَتَحْلِيلُهُ"):
     if poem_text.strip():
         prosodic_res = process_prosodic_rules(poem_text, is_end_of_verse=True)
-        symbols_res = text_to_prosodic_symbols(prosodic_res)
+        aligned_data = get_aligned_prosody(prosodic_res)
+        symbols_res = "".join([s for _, s in aligned_data])
         meter_res = detect_meter(symbols_res)
         
         st.write("---")
         st.markdown("#### 1️⃣ الكتابة العروضية:")
         st.markdown(f"<div class='prosody-text'>{prosodic_res}</div>", unsafe_allow_html=True)
         
-        st.markdown("#### 2️⃣ التقطيع والرموز العروضية (/ = متحرك ، ○ = ساكن):")
-        st.markdown(f"<div class='prosody-symbols'>{symbols_res}</div>", unsafe_allow_html=True)
+        st.markdown("#### 2️⃣ التقطيع المحاذى (/ = متحرك ، ○ = ساكن):")
+        
+        # بناء الجدول المحاذى
+        cards_html = "<div class='prosody-table-container'>"
+        for char_with_haraka, symbol in aligned_data:
+            cards_html += f"""
+            <div class='prosody-card'>
+                <div class='prosody-char'>{char_with_haraka}</div>
+                <div class='prosody-symbol'>{symbol}</div>
+            </div>
+            """
+        cards_html += "</div>"
+        
+        st.markdown(cards_html, unsafe_allow_html=True)
         
         st.markdown("#### 3️⃣ البحر العروضي:")
         st.success(f"🎯 **{meter_res}**")
