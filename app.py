@@ -18,7 +18,6 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-
 /* الخلفية الرئيسية */
 .stApp {
     background-color: #f3efe6 !important;
@@ -30,7 +29,7 @@ st.markdown("""
     padding-bottom: 3rem;
 }
 
-/* العنوان */
+/* العنوان الرئيسي */
 h1 {
     color: #3b3025 !important;
     text-align: center !important;
@@ -42,10 +41,18 @@ h2, h3 {
     color: #4b3a2a !important;
 }
 
-/* النصوص */
+/* النصوص والوصف */
+.stMarkdown p {
+    color: #3b3025 !important;
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+/* الجملة التعريفية أسفل اسم التطبيق */
 .stMarkdown {
-    direction: rtl;
-    text-align: right;
+    color: #3b3025 !important;
+    direction: rtl !important;
+    text-align: right !important;
 }
 
 /* مربع إدخال النص */
@@ -72,6 +79,7 @@ div[data-baseweb="textarea"] textarea {
 label {
     direction: rtl !important;
     text-align: right !important;
+    color: #3b3025 !important;
 }
 
 /* الأزرار */
@@ -84,9 +92,9 @@ label {
 
 /* نتيجة التحليل */
 div[data-testid="stMarkdownContainer"] {
-    direction: rtl;
-    text-align: right;
-    line-height: 1.9;
+    direction: rtl !important;
+    text-align: right !important;
+    line-height: 1.9 !important;
 }
 
 /* الخط الفاصل */
