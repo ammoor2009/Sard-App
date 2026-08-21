@@ -86,7 +86,7 @@ label {
 .stButton > button {
     border-radius: 10px !important;
     font-size: 16px !important;
-    font-weight: 700 !important;
+    font-weight: 900 !important;
     min-height: 48px !important;
 }
 
