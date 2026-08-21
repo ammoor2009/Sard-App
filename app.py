@@ -12,43 +12,6 @@ st.set_page_config(
 
 st.markdown("""
     <style>
-    .prosody-table-container {
-        display: flex;
-        flex-direction: row-reverse;
-        justify-content: center;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin: 20px 0;
-        direction: rtl;
-    }
-    .prosody-card {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        background-color: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 6px;
-        min-width: 32px;
-        padding: 4px 6px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    .prosody-char {
-        font-size: 22px;
-        font-weight: bold;
-        color: #198754;
-        line-height: 1.2;
-    }
-    .prosody-symbol {
-        font-size: 20px;
-        font-weight: bold;
-        color: #0d6efd;
-        line-height: 1.2;
-        margin-top: 4px;
-        border-top: 1px dashed #ced4da;
-        width: 100%;
-        text-align: center;
-    }
     .prosody-text {
         font-size: 22px;
         font-weight: bold;
@@ -88,7 +51,7 @@ SPECIAL_WORDS = {
 }
 
 # -----------------------------------------------------------------------------
-# 3. محرك الكتابة العروضية مع مراعاة قواعد منع التقاء الساكنين
+# 3. محرك الكتابة العروضية
 # -----------------------------------------------------------------------------
 def process_prosodic_rules(text, is_end_of_verse=True):
     words = text.split()
@@ -100,10 +63,8 @@ def process_prosodic_rules(text, is_end_of_verse=True):
         processed_words.append(w)
     text = " ".join(processed_words)
 
-    # حذف الألف الفارقة بعد واو الجماعة
     text = re.sub(r'وا(\s|$)', r'و\1', text)
 
-    # معالجة (أل) الشمسية والقمرية
     for sun in SUN_LETTERS:
         text = re.sub(rf'(^|\s)ال([{sun}])', rf'\1\2َّ', text)
         text = re.sub(rf'(^|\s)َال([{sun}])', rf'\1\2َّ', text)
@@ -118,7 +79,6 @@ def process_prosodic_rules(text, is_end_of_verse=True):
     while i < n:
         char = text[i]
 
-        # فك الشدة
         if char == 'ّ' and res:
             prev_char = res.pop()
             if res and res[-1] in SHORT_HARAKAT:
@@ -134,7 +94,6 @@ def process_prosodic_rules(text, is_end_of_verse=True):
             res.append(prev_char)
             res.append(next_haraka)
 
-        # التنوين
         elif char in TANWEEN:
             if is_end_of_verse and i == n - 1:
                 if char == 'ً':
@@ -142,7 +101,6 @@ def process_prosodic_rules(text, is_end_of_verse=True):
             else:
                 res.append(TANWEEN[char])
 
-        # التاء المربوطة
         elif char == 'ة':
             if is_end_of_verse and (i == n - 1 or (i < n - 1 and text[i+1] in SHORT_HARAKAT and i+2 == n)):
                 res.append('هْ')
@@ -156,7 +114,6 @@ def process_prosodic_rules(text, is_end_of_verse=True):
 
     prosodic = "".join(res)
 
-    # قاعدة منع التقاء الساكنين
     prosodic = re.sub(r'([اىىَ])\s*([ْلْأإآتثجحخدذرزسشصضطظلعغفقكلمنهوي])ْ', r'\2ْ', prosodic)
     prosodic = re.sub(r'[اىى]\s*لْ', r'لْ', prosodic)
     prosodic = re.sub(r'ي\s*لْ', r'لْ', prosodic)
@@ -165,7 +122,6 @@ def process_prosodic_rules(text, is_end_of_verse=True):
     prosodic = re.sub(r'ُو\s*([ْلْأإآتثجحخدذرزسشصضطظلعغفقكلمنهوي])ْ', r'\1ْ', prosodic)
     prosodic = re.sub(r'([َاِوُ])\s+([ْأإآاىل])', r'\2', prosodic)
 
-    # إشباع الوقف عند آخر الشطر
     if is_end_of_verse and prosodic:
         if prosodic[-1] == 'َ':
             prosodic = prosodic[:-1] + 'َا'
@@ -177,12 +133,9 @@ def process_prosodic_rules(text, is_end_of_verse=True):
     return prosodic
 
 # -----------------------------------------------------------------------------
-# 4. تفكيك النص إلى أزواج (حرف مع تشكيله -> رمز عروضي)
+# 4. تفكيك النص العروضي إلى أزواج محاذاتية
 # -----------------------------------------------------------------------------
 def get_aligned_prosody(prosodic_text):
-    """
-    تفكيك النص العروضي لمقاطع حرفية مسندة إلى رمز عروضي مباشر (/ أو ○)
-    """
     aligned = []
     text = re.sub(r'\s+', '', prosodic_text)
     i = 0
@@ -207,14 +160,13 @@ def get_aligned_prosody(prosodic_text):
             aligned.append((char, '○'))
             i += 1
         else:
-            # افتراض متحرك إذا أهمل التشكيل
             aligned.append((char, '/'))
             i += 1
 
     return aligned
 
 # -----------------------------------------------------------------------------
-# 5. مطابقة البحور الشعريّة
+# 5. مطابقة البحور
 # -----------------------------------------------------------------------------
 def detect_meter(symbol_seq):
     meters = {
@@ -253,18 +205,11 @@ if st.button("تَقْطِيعُ النَّصِّ وَتَحْلِيلُهُ"):
         
         st.markdown("#### 2️⃣ التقطيع المحاذى (/ = متحرك ، ○ = ساكن):")
         
-        # بناء الجدول المحاذى
-        cards_html = "<div class='prosody-table-container'>"
-        for char_with_haraka, symbol in aligned_data:
-            cards_html += f"""
-            <div class='prosody-card'>
-                <div class='prosody-char'>{char_with_haraka}</div>
-                <div class='prosody-symbol'>{symbol}</div>
-            </div>
-            """
-        cards_html += "</div>"
-        
-        st.markdown(cards_html, unsafe_allow_html=True)
+        # عرض محاذى متجاوب باستخدام أعمدة Streamlit
+        cols = st.columns(len(aligned_data))
+        for idx, (char_with_haraka, symbol) in enumerate(aligned_data):
+            with cols[idx]:
+                st.metric(label=char_with_haraka, value=symbol)
         
         st.markdown("#### 3️⃣ البحر العروضي:")
         st.success(f"🎯 **{meter_res}**")
