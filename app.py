@@ -11,16 +11,20 @@ st.set_page_config(
     layout="wide"
 )
 
-# تخصيص التصميم ومظهر الأزرار ومربع النص
+# تخصيص التصميم ومظهر الأزرار ومربع النص (مع إصلاح لون الخط)
 st.markdown("""
     <style>
-    /* تنسيق مربع النص الكبير */
+    /* تنسيق مربع النص الكبير ولون الخط داكن وواضح */
     .stTextArea textarea {
         font-size: 17px !important;
         line-height: 1.8 !important;
         direction: rtl !important;
         border-radius: 10px !important;
-        background-color: #fdfdfd !important;
+        background-color: #ffffff !important;
+        color: #1e1e1e !important;
+    }
+    div[data-baseweb="textarea"] textarea {
+        color: #1e1e1e !important;
     }
     /* زر التحليل السردي */
     div.stButton > button[key="analyze_btn"] {
@@ -53,6 +57,7 @@ st.markdown("""
     /* صندوق عرض النتائج */
     .result-box {
         background-color: #f8f9fa;
+        color: #212529;
         padding: 22px;
         border-radius: 10px;
         border-right: 5px solid #0d6efd;
