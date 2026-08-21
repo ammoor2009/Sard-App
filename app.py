@@ -10,7 +10,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# تنسيق الأزرار وجدول التقطيع المحاذى من اليمين إلى اليسار
+# تنسيق الأزرار وجدول التقطيع
 st.markdown("""
     <style>
     /* زر التقطيع الرئيسي */
@@ -37,44 +37,6 @@ st.markdown("""
         padding: 10px;
         border-radius: 8px;
         direction: rtl;
-    }
-    /* حاوية جدول التقطيع المحاذى من اليمين لليسار */
-    .taqtee-container {
-        display: flex;
-        flex-direction: row;
-        direction: rtl;
-        justify-content: flex-start;
-        overflow-x: auto;
-        padding: 10px 0;
-        margin: 15px 0;
-        gap: 4px;
-    }
-    .taqtee-card {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        background-color: #f8f9fa;
-        border: 1px solid #ced4da;
-        border-radius: 6px;
-        min-width: 36px;
-        padding: 6px 4px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.04);
-    }
-    .taqtee-char {
-        font-size: 20px;
-        font-weight: bold;
-        color: #212529;
-        margin-bottom: 4px;
-    }
-    .taqtee-symbol {
-        font-size: 22px;
-        font-weight: bold;
-        color: #0d6efd;
-        border-top: 1px dashed #adb5bd;
-        width: 100%;
-        text-align: center;
-        padding-top: 2px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -244,10 +206,10 @@ def detect_meter(symbol_seq):
     return "بحر مجزوء أو ينبغي التحقق من دقة التشكيل"
 
 # -----------------------------------------------------------------------------
-# 6. قسم التفاعل مع الواجهة
+# 6. واجهة التفاعل
 # -----------------------------------------------------------------------------
 if 'input_text' not in st.session_state:
-    st.session_state['input_text'] = "عُلُوٌّ فِي الْحَيَاةِ وَفِي الْمَمَاتِ"
+    st.session_state['input_text'] = "إِذَا المَرْءُ لَمْ يَدْنَسْ مِنَ اللُّؤْمِ عِرْضُهُ"
 
 st.markdown("##### 💡 أمثلة وشواهد شعرية سريعة (اضغط للتجربة):")
 
@@ -294,18 +256,18 @@ if analyze_btn:
         
         st.markdown("#### 2️⃣ التقطيع المحاذى (من اليمين إلى اليسار):")
         
-        # بناء بطاقات التقطيع باتجاه RTL من اليمين لليسار
-        cards_html = "<div class='taqtee-container'>"
-        for char_with_haraka, symbol in aligned_data:
-            cards_html += f"""
-            <div class='taqtee-card'>
-                <div class='taqtee-char'>{char_with_haraka}</div>
-                <div class='taqtee-symbol'>{symbol}</div>
-            </div>
-            """
-        cards_html += "</div>"
+        # إنشاء جدول ببيانات التقطيع محاذى 100% من اليمين لليسار
+        chars_list = [item[0] for item in aligned_data]
+        symbols_list = [item[1] for item in aligned_data]
         
-        st.markdown(cards_html, unsafe_allow_html=True)
+        st.data_editor(
+            [chars_list, symbols_list],
+            column_config={
+                i: st.column_config.Column(width="small") for i in range(len(aligned_data))
+            },
+            disabled=True,
+            hide_index=True
+        )
         
         st.markdown("#### 3️⃣ البحر العروضي المتوقع:")
         st.success(f"🎯 **{meter_res}**")
