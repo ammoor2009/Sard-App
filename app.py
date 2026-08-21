@@ -1,10 +1,9 @@
 import streamlit as st
-import requests
+import google.generativeai as genai
 
-# 1. إعدادات الصفحة
+# 1. إعدادات الصفحة والتنسيق
 st.set_page_config(page_title="مختبر التحليل السردي", page_icon="📖", layout="wide")
 
-# 2. التنسيق والواجهة
 st.markdown("""
     <style>
     .stTextArea textarea {
@@ -21,13 +20,17 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. جلب مفتاح API
-api_key = st.secrets.get("GEMINI_API_KEY")
-
+# 2. العنوان والتواجهة
 st.title("📖 مختبر التحليل السردي والبنيوي")
 st.subheader("د. عمر الرواجفة | قسم اللغة العربية وآدابها")
 st.write("أداة أكاديمية تفاعلية لتفكيك النصوص الروائية والقصصية وفق مناهج النقد السردي الحديث.")
 st.write("---")
+
+# 3. قراءة المفتاح وتثبيت العميل
+api_key = st.secrets.get("GEMINI_API_KEY")
+
+if api_key:
+    genai.configure(api_key=api_key)
 
 if 'text' not in st.session_state:
     st.session_state['text'] = ""
@@ -51,7 +54,7 @@ if btn_clear:
     st.session_state['text'] = ""
     st.rerun()
 
-# 4. إجراء التحليل المباشر بواسطة HTTP REST Request
+# 4. المعالجة والإرسال المباشر
 if btn_analyze:
     if not api_key:
         st.error("⚠️ لم يتم العثور على GEMINI_API_KEY في إعدادات Streamlit Secrets.")
@@ -60,8 +63,8 @@ if btn_analyze:
     else:
         with st.spinner("جاري تفكيك النص وتحليله نقديّاً..."):
             try:
-                # محاولة الاتصال بالنموذج المحدث الأول (gemini-2.5-flash)
-                models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+                # استدعاء النموذج القياسي عبر المكتبة المباشرة
+                model = genai.GenerativeModel('gemini-1.5-flash')
                 
                 prompt = f"""
                 أنت ناقد أدبي وخبير أكاديمي متخصص في النقد السردي والسيميائيات (مناهج جيرار جينيت، ورولان بارت، والناقدين العرب).
@@ -94,30 +97,11 @@ if btn_analyze:
                    - طبيعة أطر المكان (مغلق/مفتوح، أليف/معادٍ) وعلاقته بحالة الشخصيات النفسية والدلالية.
                 """
 
-                payload = {
-                    "contents": [{
-                        "parts": [{"text": prompt}]
-                    }]
-                }
+                response = model.generate_content(prompt)
 
-                headers = {'Content-Type': 'application/json'}
-                
-                success = False
-                for model_name in models_to_try:
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
-                    response = requests.post(url, json=payload, headers=headers)
-                    res_json = response.json()
-
-                    if response.status_code == 200 and 'candidates' in res_json:
-                        analysis_result = res_json['candidates'][0]['content']['parts'][0]['text']
-                        st.write("---")
-                        st.markdown("### 📊 نتائج التحليل السردي والنقدي:")
-                        st.markdown(analysis_result)
-                        success = True
-                        break
-
-                if not success:
-                    st.error("تعذر الاتصال بالسيرفر. يرجى التأكد من صحة مفتاح GEMINI_API_KEY في إعدادات Secrets.")
+                st.write("---")
+                st.markdown("### 📊 نتائج التحليل السردي والنقدي:")
+                st.markdown(response.text)
 
             except Exception as e:
                 st.error(f"حدث خطأ أثناء إجراء التحليل: {e}")
