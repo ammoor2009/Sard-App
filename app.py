@@ -1,3 +1,4 @@
+import time
 import streamlit as st
 from google import genai
 
@@ -134,6 +135,7 @@ if btn_analyze:
     # -----------------------------------------------------
 
     if not api_key:
+
         st.error(
             "⚠️ لم يتم العثور على GEMINI_API_KEY.\n\n"
             "اذهب إلى Streamlit → Settings → Secrets "
@@ -145,6 +147,7 @@ if btn_analyze:
     # -----------------------------------------------------
 
     elif not text_input.strip():
+
         st.warning("⚠️ يرجى إدخال النص السردي أولًا.")
 
     # -----------------------------------------------------
@@ -152,6 +155,7 @@ if btn_analyze:
     # -----------------------------------------------------
 
     elif client is None:
+
         st.error("⚠️ تعذر إنشاء الاتصال بخدمة Gemini.")
 
     else:
@@ -279,47 +283,64 @@ if btn_analyze:
 """
 
         # -------------------------------------------------
-        # إرسال الطلب إلى Gemini
+        # إرسال الطلب إلى Gemini مع إعادة المحاولة
         # -------------------------------------------------
 
         with st.spinner(
             "⏳ جارٍ تفكيك النص وتحليله نقديًا..."
         ):
 
-            try:
+            response = None
+            last_error = None
 
-                response = client.models.generate_content(
-                    model="gemini-3.6-flash",
-                    contents=prompt
+            # المحاولة الأولى + محاولتان تلقائيتان عند الفشل
+            for attempt in range(3):
+
+                try:
+
+                    response = client.models.generate_content(
+                        model="gemini-3.6-flash",
+                        contents=prompt
+                    )
+
+                    # نجاح الطلب
+                    if response and response.text:
+                        break
+
+                    # لم تصل نتيجة نصية
+                    last_error = "لم يُرجع النموذج نتيجة نصية."
+
+                except Exception as e:
+
+                    last_error = e
+
+                    # إذا لم تكن المحاولة الأخيرة
+                    if attempt < 2:
+
+                        # انتظار 3 ثوانٍ ثم إعادة المحاولة
+                        time.sleep(3)
+
+            # -------------------------------------------------
+            # عرض النتيجة
+            # -------------------------------------------------
+
+            if response and response.text:
+
+                st.write("---")
+
+                st.markdown(
+                    "### 📊 نتائج التحليل السردي والنقدي"
                 )
 
-                # -------------------------------------------------
-                # عرض النتيجة
-                # -------------------------------------------------
+                st.markdown(response.text)
 
-                if response and response.text:
-
-                    st.write("---")
-
-                    st.markdown(
-                        "### 📊 نتائج التحليل السردي والنقدي"
-                    )
-
-                    st.markdown(response.text)
-
-                else:
-
-                    st.error(
-                        "⚠️ لم يُرجع النموذج نتيجة نصية."
-                    )
-
-            except Exception as e:
+            else:
 
                 st.error(
-                    "❌ حدث خطأ أثناء الاتصال بـ Gemini:"
+                    "❌ تعذر الحصول على التحليل بعد 3 محاولات."
                 )
 
-                st.code(str(e))
+                st.code(str(last_error))
 
 # =========================================================
 # 11. التذييل
@@ -329,4 +350,4 @@ st.write("---")
 
 st.caption(
     "تطوير د. عمر الرواجفة © مختبر اللسانيات الحاسوبية وتحليل الخطاب"
-)
+                    )
