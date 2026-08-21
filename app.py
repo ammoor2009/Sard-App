@@ -1,74 +1,127 @@
 import streamlit as st
-import google.generativeai as genai
+import requests
 
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="مختبر التحليل السردي", page_icon="📖", layout="wide")
 
-st.title("📖 مختبر التحليل السردي والبنيوي")
-st.subheader("د. عمر الرواجفة | قسم اللغة العربية وآدابها")
-st.write("أداة أكاديمية لتفكيك النصوص الروائية والقصصية وفق مناهج النقد السردي الحديث.")
-st.write("---")
+# 2. التنسيق والواجهة
+st.markdown("""
+    <style>
+    .stTextArea textarea {
+        font-size: 17px !important;
+        line-height: 1.8 !important;
+        direction: rtl !important;
+        border-radius: 10px !important;
+        background-color: #ffffff !important;
+        color: #1e1e1e !important;
+    }
+    div[data-baseweb="textarea"] textarea {
+        color: #1e1e1e !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
-# 2. جلب المفتاح وإعداد العميل
+# 3. جلب مفتاح API
 api_key = st.secrets.get("GEMINI_API_KEY")
 
-if api_key:
-    genai.configure(api_key=api_key)
-else:
-    st.error("⚠️ لم يتم العثور على GEMINI_API_KEY في إعدادات Streamlit Secrets.")
+st.title("📖 مختبر التحليل السردي والبنيوي")
+st.subheader("د. عمر الرواجفة | قسم اللغة العربية وآدابها")
+st.write("أداة أكاديمية تفاعلية لتفكيك النصوص الروائية والقصصية وفق مناهج النقد السردي الحديث.")
+st.write("---")
 
-# 3. إدخال النص
+if 'text' not in st.session_state:
+    st.session_state['text'] = ""
+
 text_input = st.text_area(
     "ضع النص السردي هنا للتحليل الشامل:",
-    height=300,
+    value=st.session_state['text'],
+    height=350,
     placeholder="انسخ النص السردي واكتبه هنا..."
 )
 
 col1, col2 = st.columns([3, 1])
-with col1:
-    btn_analyze = st.button("🔬 تقديم تحليل سردي شامل", type="primary", use_container_width=True)
-with col2:
-    if st.button("🗑️ مسح النص", use_container_width=True):
-        st.rerun()
 
-# 4. إرسال النص واستقبال النتيجة فقط
+with col1:
+    btn_analyze = st.button("🔬 تَقْدِيمُ تَحْلِيلٍ سَرْدِيٍّ شَامِلٍ", type="primary", use_container_width=True)
+
+with col2:
+    btn_clear = st.button("🗑️ مسح النص", use_container_width=True)
+
+if btn_clear:
+    st.session_state['text'] = ""
+    st.rerun()
+
+# 4. إجراء التحليل المباشر بواسطة HTTP REST Request
 if btn_analyze:
     if not api_key:
-        st.error("يرجى إضافة مفتاح API أولاً.")
+        st.error("⚠️ لم يتم العثور على GEMINI_API_KEY في إعدادات Streamlit Secrets.")
     elif not text_input.strip():
         st.warning("يرجى إدخال النص السردي أولاً.")
     else:
-        with st.spinner("جاري إرسال النص لمعالجته ونقده..."):
+        with st.spinner("جاري تفكيك النص وتحليله نقديّاً..."):
             try:
-                # استدعاء النموذج المباشر
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                # استخدام نموذج gemini-1.5-flash الصحيح بالرابط المباشر
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
                 
                 prompt = f"""
                 أنت ناقد أدبي وخبير أكاديمي متخصص في النقد السردي والسيميائيات (مناهج جيرار جينيت، ورولان بارت، والناقدين العرب).
-                قم بإجراء تحليل بنيوي دقيق للنص الأدبي المرفق أدناه:
+                قم بإجراء تحليل نقد بنيوي حاسوبي ودقيق للنص الأدبي المرفق أدناه:
 
                 النص السردي:
                 \"\"\"
                 {text_input}
                 \"\"\"
 
-                المطلوب تقديم تقرير نقد بنيوي شامل يحتوي على المحاور التالية بشكل مباشر:
-                1. الراوي والتبئير (Focalization)
-                2. الزمن السردي (Narrative Time)
-                3. الشخصيات والخطاب السردي (Actantial Model)
-                4. المونولوج واللغة السردية
-                5. المكان والفضاء السردي (Space & Setting)
+                المطلوب تقديم تقرير نقد بنيوي شامل ومفصل يحتوي على المحاور التالية بشكل مباشر ومقسم بوضوح:
+
+                1. **الراوي والتبئير (Focalization):**
+                   - نوع الراوي (مشارِك/عليم/خارجي) مع تحديد ضمير السرد الأغلب.
+                   - نوع التبئير (صفر/داخلي/خارجي) وتحولاته داخل النص.
+
+                2. **الزمن السردي (Narrative Time):**
+                   - المفارقات الزمنية (الاسترجاع Analepsis / الاستباق Prolepsis).
+                   - السرعة السردية (الخلاصة، المشهد، الوقفات الوصفية، الحذف).
+
+                3. **الشخصيات والخطاب السردي:**
+                   - الشخصيات (رئيسية/ثانوية) ودورها العاملِي (Actantial Model).
+                   - أشكال الخطاب (مباشر، غير مباشر، غير مباشر حر).
+
+                4. **المونولوج واللغة السردية:**
+                   - النجوى الداخلية (المونولوج الباطني) والتداعي الحر للأفكار.
+                   - مستويات اللغة السردية والأنساق المعجمية والدلالية الأبرز.
+
+                5. **المكان والفضاء السردي (Space & Setting):**
+                   - طبيعة أطر المكان (مغلق/مفتوح، أليف/معادٍ) وعلاقته بحالة الشخصيات النفسية والدلالية.
                 """
 
-                # الطلب يرسل النص إلى سيرفرات الذكاء الاصطناعي ويعود بنص فقط
-                response = model.generate_content(prompt)
-                
-                st.write("---")
-                st.markdown("### 📊 نتائج التحليل السردي والنقدي:")
-                st.markdown(response.text)
+                payload = {
+                    "contents": [{
+                        "parts": [{"text": prompt}]
+                    }]
+                }
+
+                headers = {'Content-Type': 'application/json'}
+                response = requests.post(url, json=payload, headers=headers)
+                res_json = response.json()
+
+                if response.status_code == 200:
+                    analysis_result = res_json['candidates'][0]['content']['parts'][0]['text']
+                    st.write("---")
+                    st.markdown("### 📊 نتائج التحليل السردي والنقدي:")
+                    st.markdown(analysis_result)
+                else:
+                    # في حال وجد أي استثناء بنوع النموذج يتم التحويل تلقائياً لـ gemini-2.0-flash
+                    url_alt = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
+                    res_alt = requests.post(url_alt, json=payload, headers=headers).json()
+                    if 'candidates' in res_alt:
+                        st.write("---")
+                        st.markdown("### 📊 نتائج التحليل السردي والنقدي:")
+                        st.markdown(res_alt['candidates'][0]['content']['parts'][0]['text'])
+                    else:
+                        st.error(f"خطأ من API: {res_json.get('error', {}).get('message', 'خطأ غير معروف')}")
 
             except Exception as e:
-                st.error(f"حدث خطأ أثناء الاتصال: {e}")
+                st.error(f"حدث خطأ أثناء إجراء التحليل: {e}")
 
 st.write("---")
 st.caption("تطوير د. عمر الرواجفة © مختبر اللسانيات الحاسوبية وتحليل الخطاب")
