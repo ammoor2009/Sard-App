@@ -1,11 +1,10 @@
 import streamlit as st
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 
 # 1. إعدادات الصفحة
 st.set_page_config(page_title="مختبر التحليل السردي", page_icon="📖", layout="wide")
 
-# 2. تخصيص المظهر وتسهيل القراءة
+# 2. التنسيق
 st.markdown("""
     <style>
     .stTextArea textarea {
@@ -32,8 +31,11 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 3. جلب المفتاح
+# 3. جلب المفتاح وإعداد النموذج
 api_key = st.secrets.get("GEMINI_API_KEY")
+
+if api_key:
+    genai.configure(api_key=api_key)
 
 # 4. الواجهة والمدخلات
 st.title("📖 مختبر التحليل السردي والبنيوي")
@@ -72,8 +74,7 @@ if btn_analyze:
     else:
         with st.spinner("جاري تفكيك النص وتحليله نقديّاً..."):
             try:
-                # إنشاء العميل
-                client = genai.Client(api_key=api_key)
+                model = genai.GenerativeModel('gemini-1.5-flash')
 
                 prompt = f"""
                 أنت ناقد أدبي وخبير أكاديمي متخصص في النقد السردي والسيميائيات (مناهج جيرار جينيت، ورولان بارت، والناقدين العرب).
@@ -106,11 +107,7 @@ if btn_analyze:
                    - طبيعة أطر المكان (مغلق/مفتوح، أليف/معادٍ) وعلاقته بحالة الشخصيات النفسية والدلالية.
                 """
 
-                # طلب التحليل من الموديل
-                response = client.models.generate_content(
-                    model='gemini-1.5-flash',
-                    contents=prompt
-                )
+                response = model.generate_content(prompt)
                 
                 st.write("---")
                 st.markdown("### 📊 نتائج التحليل السردي والنقدي:")
